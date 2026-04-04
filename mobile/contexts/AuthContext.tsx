@@ -228,8 +228,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const mod = getGoogleSignInModule();
     if (!mod) return;
+
+    // Read webClientId from Expo config (injected via app.config.js from .env.local)
+    const webClientId = Constants.expoConfig?.extra?.googleSignInWebClientId;
+    if (!webClientId) {
+      console.warn(
+        '[AUTH] Google Sign-In: webClientId not configured. ' +
+        'Add GOOGLE_SIGNIN_WEB_CLIENT_ID to mobile/.env.local to enable.'
+      );
+      return;
+    }
+
     mod.GoogleSignin.configure({
-      webClientId: process.env.GOOGLE_SIGNIN_WEB_CLIENT_ID,
+      webClientId,
       offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
