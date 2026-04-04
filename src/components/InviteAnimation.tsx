@@ -2,13 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '@/store/useAppStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { CHARACTERS } from '@/data/characters';
+import type { AppScreen } from '@/app/page';
 
-export default function InviteAnimation() {
-    const { selectedCharacters, setScreen } = useAppStore();
+interface InviteAnimationProps {
+    onNavigate: (screen: AppScreen) => void;
+}
+
+export default function InviteAnimation({ onNavigate }: InviteAnimationProps) {
+    const activeSession = useSessionStore(state => {
+        const id = state.activeSessionId;
+        if (!id) return null;
+        return state.sessions.find(s => s.sessionId === id) ?? null;
+    });
+    const selectedCharacters = activeSession?.selectedCharacters ?? [];
     const [visibleCount, setVisibleCount] = useState(0);
-    const [statusText, setStatusText] = useState('Meclis toplanıyor...');
+    const [statusText, setStatusText] = useState('Ekip toplanıyor...');
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -28,9 +38,11 @@ export default function InviteAnimation() {
         if (visibleCount >= selectedCharacters.length) {
             setTimeout(() => setStatusText('SİNERJİ ANALİZİ YAPILIYOR'), 500);
             setTimeout(() => setStatusText('Hazır. Danışmaya başlayalım.'), 1800);
-            setTimeout(() => setScreen('discussion'), 2800);
+            setTimeout(() => {
+                onNavigate('discussion');
+            }, 2800);
         }
-    }, [visibleCount, selectedCharacters.length, setScreen]);
+    }, [visibleCount, selectedCharacters.length, onNavigate]);
 
     const getCharPos = (index: number, total: number) => {
         const angleStart = -60;

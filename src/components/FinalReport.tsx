@@ -1,13 +1,65 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useAppStore } from '@/store/useAppStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { CHARACTERS } from '@/data/characters';
+import { CHARACTER_VISUALS } from '@/lib/characterVisuals';
+import ShareCard, { useShareCard } from './ShareCard';
+import { trackEvent } from '@/lib/analytics';
+import type { AppScreen } from '@/app/page';
 
-export default function FinalReport() {
-    const { report, selectedCharacters, turns, startNewSession } = useAppStore();
+interface FinalReportProps {
+    onNavigate: (screen: AppScreen) => void;
+}
 
-    if (!report) return null;
+export default function FinalReport({ onNavigate }: FinalReportProps) {
+    const activeSession = useSessionStore(state => {
+        const id = state.activeSessionId;
+        if (!id) return null;
+        return state.sessions.find(s => s.sessionId === id) ?? null;
+    });
+    const streak = useSessionStore(state => state.streak);
+    const clearActiveSession = useSessionStore(state => state.clearActiveSession);
+
+    const [headerRevealed, setHeaderRevealed] = useState(false);
+    const [displayedTitle, setDisplayedTitle] = useState('');
+    const shareCardRef = useRef<HTMLDivElement>(null);
+    const { share } = useShareCard();
+
+    const headerText = 'Meclisin Kararı';
+
+    // Typewriter reveal for header
+    useEffect(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i <= headerText.length) {
+                setDisplayedTitle(headerText.slice(0, i));
+                i++;
+            } else {
+                clearInterval(interval);
+                setHeaderRevealed(true);
+            }
+        }, 60);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Track report viewed
+    useEffect(() => {
+        if (activeSession) {
+            trackEvent('report_viewed', {
+                total_rounds: activeSession.turns.length,
+                session_id: activeSession.sessionId,
+            });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    if (!activeSession || !activeSession.report) return null;
+
+    const report = activeSession.report;
+    const selectedCharacters = activeSession.selectedCharacters;
+    const turns = activeSession.turns;
 
     // Determine dominant vote
     const voteCounts: Record<string, number> = {};
@@ -18,21 +70,36 @@ export default function FinalReport() {
     const dominantMbti = dominantVote?.[0] || selectedCharacters[0];
     const dominantChar = CHARACTERS.find(c => c.mbti === dominantMbti);
 
+    const reportId = `#16TT-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const handleNewSession = () => {
+        clearActiveSession();
+        onNavigate('welcome');
+    };
+
     return (
         <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
             {/* Top bar */}
             <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                 <div className="flex items-center gap-3">
                     <span className="text-lg">☰</span>
-                    <span className="text-sm tracking-[0.2em] uppercase font-medium">İÇ MECLİS</span>
+                    <span className="text-sm tracking-[0.2em] uppercase font-medium"><span style={{ color: '#5B4FD4' }}>16</span>TypeTalk</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-xs font-bold">
-                    {dominantMbti?.[0] || 'U'}
+                <div className="flex items-center gap-3">
+                    {streak.currentStreak > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-[var(--accent)]">
+                            <span>{streak.currentStreak >= 7 ? '🔥' : '⚡'}</span>
+                            <span>{streak.currentStreak}</span>
+                        </div>
+                    )}
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-xs font-bold">
+                        {dominantMbti?.[0] || 'U'}
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-2xl mx-auto px-4 py-8 pb-32">
-                {/* Header */}
+                {/* Header — Typewriter reveal */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -42,30 +109,23 @@ export default function FinalReport() {
                         className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-2"
                         style={{ fontFamily: "'Playfair Display', serif" }}
                     >
-                        Meclisin Kararı
+                        {displayedTitle}
+                        <span style={{
+                            display: 'inline-block',
+                            width: 2,
+                            height: '0.8em',
+                            background: '#534AB7',
+                            marginLeft: 3,
+                            animation: headerRevealed ? 'none' : 'blink 0.7s infinite',
+                            verticalAlign: 'middle',
+                        }} />
                     </h1>
                     <p className="text-sm text-[var(--text-secondary)]">
                         {turns.length} turda elde edilen içgörüler
                     </p>
                 </motion.div>
 
-                {/* Core Tension */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="rounded-xl p-5 mb-4"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
-                >
-                    <p className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-3 font-medium">
-                        TEMEL GERİLİM
-                    </p>
-                    <p className="text-sm text-[var(--text-primary)] leading-relaxed">
-                        {report.coreTension}
-                    </p>
-                </motion.div>
-
-                {/* Character Positions */}
+                {/* Section 1: Core Tension — the fundamental conflict identified */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -73,152 +133,210 @@ export default function FinalReport() {
                     className="rounded-xl p-5 mb-4"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
                 >
+                    <p className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-3 font-medium">
+                        TEMEL GERİLİM
+                    </p>
+                    <p className="text-base text-[var(--text-primary)] leading-relaxed">
+                        {report.coreTension}
+                    </p>
+                </motion.div>
+
+                {/* Section 2: Where each voice landed */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="rounded-xl p-5 mb-4"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
+                >
                     <p className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-4 font-medium">
-                        KARAKTERLERİN NİHAİ POZİSYONLARI
+                        HER SESİN VARDIĞI NOKTA
                     </p>
                     <div className="space-y-4">
-                        {Object.entries(report.characterPositions).map(([mbti, position]) => {
+                        {Object.entries(report.characterPositions).map(([mbti, position], i) => {
                             const char = CHARACTERS.find(c => c.mbti === mbti);
                             return (
-                                <div key={mbti} className="flex gap-3">
+                                <motion.div
+                                    key={mbti}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.5 + i * 0.1 }}
+                                    className="flex gap-3"
+                                >
                                     <div
                                         className="w-1 rounded-full flex-shrink-0"
                                         style={{ background: char?.color || '#7C3AED' }}
                                     />
                                     <div>
-                                        <p className="text-xs font-bold tracking-wider mb-1" style={{ color: char?.color }}>
-                                            {mbti}
-                                        </p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div
+                                                className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold"
+                                                style={{ background: `${char?.color}20`, color: char?.color }}
+                                            >
+                                                {mbti[0]}
+                                            </div>
+                                            <p className="text-xs font-bold tracking-wider" style={{ color: char?.color }}>
+                                                {char?.name || mbti}
+                                            </p>
+                                        </div>
                                         <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                                             {position}
                                         </p>
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>
                 </motion.div>
 
-                {/* User Insight + Weekly Action */}
+                {/* Section 3: Three paths forward */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="grid grid-cols-2 gap-3 mb-4"
-                >
-                    <div
-                        className="rounded-xl p-4"
-                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
-                    >
-                        <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-3 font-medium">
-                            SENİN SESİN
-                        </p>
-                        <div className="flex flex-col items-center">
-                            <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold mb-2"
-                                style={{ background: `${dominantChar?.color}20`, color: dominantChar?.color }}
-                            >
-                                {dominantMbti?.substring(0, 2)}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)] text-center">
-                                {dominantChar?.name || 'Empatik'} Yaklaşım
-                            </p>
-                        </div>
-                    </div>
-
-                    <div
-                        className="rounded-xl p-4"
-                        style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.05))', border: '1px solid rgba(124,58,237,0.2)' }}
-                    >
-                        <p className="text-[10px] tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-3 font-medium">
-                            HAFTALIK AKSİYON
-                        </p>
-                        <p className="text-sm text-[var(--text-primary)] leading-relaxed">
-                            {report.nextStep}
-                        </p>
-                    </div>
-                </motion.div>
-
-                {/* Action Paths */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="rounded-xl p-5 mb-6"
+                    transition={{ delay: 0.6 }}
+                    className="rounded-xl p-5 mb-4"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
                 >
                     <p className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-4 font-medium">
-                        ÖNERİLEN YOLLAR
+                        ÜÇ YOL
                     </p>
                     <div className="space-y-4">
                         {report.actionPaths.map((path, i) => (
-                            <div key={i} className="flex gap-3 items-start">
-                                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs bg-[var(--accent)]/20 text-[var(--accent)]">
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.7 + i * 0.1 }}
+                                className="flex gap-3 items-start"
+                            >
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold bg-[var(--accent)]/20 text-[var(--accent)]">
                                     {i + 1}
                                 </div>
                                 <p className="text-sm text-[var(--text-primary)] leading-relaxed">
                                     {path}
                                 </p>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
                 </motion.div>
 
-                {/* User Insight */}
+                {/* Section 4: What your choices reveal — THE MOST POWERFUL SECTION */}
                 {report.userInsight && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="rounded-xl p-5 mb-8"
-                        style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)' }}
+                        transition={{ delay: 0.9 }}
+                        className="rounded-xl p-5 mb-4 relative overflow-hidden"
+                        style={{
+                            background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(109,40,217,0.05))',
+                            border: '1px solid rgba(124,58,237,0.25)',
+                        }}
                     >
-                        <p className="text-xs tracking-[0.15em] uppercase text-[var(--accent)] mb-3 font-medium">
-                            İÇGÖRÜ
+                        {/* Subtle glow effect */}
+                        <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-[var(--accent)]/10 blur-3xl" />
+
+                        <p className="text-xs tracking-[0.15em] uppercase text-[var(--accent)] mb-3 font-medium relative z-10">
+                            SEÇİMLERİN NE SÖYLÜYOR
                         </p>
-                        <p className="text-sm text-[var(--text-primary)] leading-relaxed italic">
+                        <p className="text-sm text-[var(--text-primary)] leading-relaxed relative z-10">
                             {report.userInsight}
                         </p>
+
+                        {/* Dominant voice indicator */}
+                        {dominantChar && (
+                            <div className="mt-4 pt-4 border-t border-[var(--accent)]/15 flex items-center gap-3 relative z-10">
+                                <div
+                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-base"
+                                    style={{ background: CHARACTER_VISUALS[dominantMbti]?.bg || `${dominantChar.color}20` }}
+                                >
+                                    {CHARACTER_VISUALS[dominantMbti]?.emoji || dominantMbti?.substring(0, 2)}
+                                </div>
+                                <div>
+                                    <p className="text-xs text-[var(--text-secondary)]">
+                                        En çok uyum hissettiğin ses
+                                    </p>
+                                    <p className="text-sm font-medium" style={{ color: dominantChar.color }}>
+                                        {dominantChar.name} ({dominantMbti})
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
 
-                {/* Share button */}
-                <motion.button
+                {/* Section 5: One thing to do this week */}
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="w-full py-4 rounded-xl text-white font-semibold text-sm tracking-wider uppercase flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)' }}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    transition={{ delay: 1.1 }}
+                    className="rounded-xl p-5 mb-8"
+                    style={{
+                        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.05))',
+                        border: '1px solid rgba(124,58,237,0.2)',
+                    }}
                 >
-                    ← BU RAPORU PAYLAŞ
-                </motion.button>
+                    <p className="text-xs tracking-[0.15em] uppercase text-[var(--accent)] mb-3 font-medium">
+                        BU HAFTA YAP
+                    </p>
+                    <p className="text-base text-[var(--text-primary)] leading-relaxed font-medium">
+                        {report.nextStep}
+                    </p>
+                </motion.div>
+
+                {/* Action buttons */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.3 }}
+                    className="space-y-3"
+                >
+                    {/* Share button */}
+                    <button
+                        onClick={() => {
+                            trackEvent('report_shared', {
+                                voted_persona: dominantMbti,
+                                character_count: selectedCharacters.length,
+                            });
+                            if (shareCardRef.current) share(shareCardRef.current);
+                        }}
+                        className="w-full py-4 rounded-xl text-white font-semibold text-sm tracking-wider uppercase flex items-center justify-center gap-2"
+                        style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)' }}
+                    >
+                        BU RAPORU PAYLAŞ →
+                    </button>
+
+                    {/* New Session */}
+                    <button
+                        onClick={handleNewSession}
+                        className="w-full py-3 rounded-xl text-sm font-medium text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-white/5 transition-all tracking-wider uppercase"
+                    >
+                        Yeni Konu Başlat →
+                    </button>
+                </motion.div>
 
                 {/* Archive ID */}
-                <p className="text-center text-[10px] text-[var(--text-secondary)]/30 mt-4 tracking-wider">
-                    ARŞİV NO: #MECLIS-{new Date().getFullYear()}-{String(new Date().getMonth() + 1).padStart(2, '0')}
+                <p className="text-center text-[10px] text-[var(--text-secondary)]/30 mt-6 tracking-wider">
+                    ARŞİV NO: {reportId}
                 </p>
 
-                {/* New Session Button */}
-                <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                    onClick={startNewSession}
-                    className="mt-6 w-full py-3 rounded-xl text-sm font-medium text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-white/5 transition-all tracking-wider uppercase"
-                >
-                    Yeni Danışma Başlat →
-                </motion.button>
+                {/* Hidden ShareCard for PNG generation */}
+                <ShareCard
+                    ref={shareCardRef}
+                    problem={activeSession.problem}
+                    characters={selectedCharacters}
+                    votedPersona={dominantMbti}
+                    topInsight={report.userInsight || ''}
+                    reportId={reportId}
+                />
             </div>
 
             {/* Bottom nav (mobile) */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around py-3 px-4 text-xs text-[var(--text-secondary)]" style={{ background: 'rgba(13, 13, 15, 0.95)', backdropFilter: 'blur(20px)', borderTop: '1px solid var(--border-subtle)' }}>
-                <button className="flex flex-col items-center gap-1" onClick={startNewSession}>
+                <button className="flex flex-col items-center gap-1" onClick={handleNewSession}>
                     <span>⚡</span>
                     <span>MECLİS</span>
                 </button>
-                <button className="flex flex-col items-center gap-1" onClick={startNewSession}>
+                <button className="flex flex-col items-center gap-1" onClick={handleNewSession}>
                     <span>✦</span>
                     <span>YENİ KONU</span>
                 </button>

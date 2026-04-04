@@ -1,16 +1,24 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useAppStore } from '@/store/useAppStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { CHARACTERS } from '@/data/characters';
+import { CHARACTER_VISUALS } from '@/lib/characterVisuals';
 import CharacterCard from './CharacterCard';
+import type { AppScreen } from '@/app/page';
 
-export default function CharacterGrid() {
-    const { selectedCharacters, toggleCharacter, setScreen } = useAppStore();
+interface CharacterGridProps {
+    onNavigate: (screen: AppScreen) => void;
+}
+
+export default function CharacterGrid({ onNavigate }: CharacterGridProps) {
+    const { pendingCharacters, togglePendingCharacter, updateSelectedCharacters } = useSessionStore();
 
     const handleProceed = () => {
-        if (selectedCharacters.length >= 2) {
-            setScreen('invite');
+        if (pendingCharacters.length >= 2) {
+            // Write characters to the active session
+            updateSelectedCharacters(pendingCharacters);
+            onNavigate('invite');
         }
     };
 
@@ -24,13 +32,13 @@ export default function CharacterGrid() {
             >
                 <div className="flex items-center justify-between mb-6">
                     <button
-                        onClick={() => setScreen('welcome')}
+                        onClick={() => onNavigate('welcome')}
                         className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2"
                     >
                         ← GERİ DÖN
                     </button>
                     <span className="text-sm tracking-[0.2em] uppercase font-medium text-[var(--text-primary)]">
-                        İÇ MECLİS
+                        <span style={{ color: '#5B4FD4' }}>16</span>TypeTalk
                     </span>
                     <div className="w-8 h-8 rounded-full bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-center text-xs">
                         ⚙
@@ -45,10 +53,10 @@ export default function CharacterGrid() {
                     className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-2"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                 >
-                    Kimi davet etmek istiyorsun?
+                    Kimlerden duymak istersin?
                 </h2>
                 <p className="text-sm text-[var(--text-secondary)]">
-                    Kendi stratejik konseyinizi kurun. Her karakter farklı bir bilişsel işleyiş ve çözüm perspektifi sunar.
+                    Her ses farklı düşünür. Kendi ekibini kur.
                 </p>
             </motion.div>
 
@@ -59,8 +67,8 @@ export default function CharacterGrid() {
                         <CharacterCard
                             key={char.mbti}
                             mbti={char.mbti}
-                            isSelected={selectedCharacters.includes(char.mbti)}
-                            onToggle={() => toggleCharacter(char.mbti)}
+                            isSelected={pendingCharacters.includes(char.mbti)}
+                            onToggle={() => togglePendingCharacter(char.mbti)}
                             index={i}
                         />
                     ))}
@@ -75,17 +83,16 @@ export default function CharacterGrid() {
                 style={{ background: 'rgba(13, 13, 15, 0.95)', backdropFilter: 'blur(20px)' }}
             >
                 <div className="max-w-lg mx-auto flex items-center gap-4">
-                    {/* Avatars */}
                     <div className="flex -space-x-2">
-                        {selectedCharacters.slice(0, 5).map((mbti) => {
-                            const char = CHARACTERS.find(c => c.mbti === mbti);
+                        {pendingCharacters.slice(0, 5).map((mbti) => {
+                            const vis = CHARACTER_VISUALS[mbti];
                             return (
                                 <div
                                     key={mbti}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-[var(--bg-primary)]"
-                                    style={{ background: char?.color || '#7C3AED' }}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm border-2 border-[var(--bg-primary)]"
+                                    style={{ background: vis?.bg || '#7C3AED' }}
                                 >
-                                    {mbti[0]}
+                                    {vis?.emoji || mbti[0]}
                                 </div>
                             );
                         })}
@@ -93,25 +100,25 @@ export default function CharacterGrid() {
 
                     <div className="flex-1">
                         <p className="text-xs text-[var(--text-secondary)]">
-                            {selectedCharacters.length > 0
-                                ? `${selectedCharacters.length} seçildi`
+                            {pendingCharacters.length > 0
+                                ? `${pendingCharacters.length} seçildi`
                                 : 'KONSEY TAMAMLANMIYOR'}
                         </p>
                     </div>
 
                     <motion.button
                         onClick={handleProceed}
-                        disabled={selectedCharacters.length < 2}
+                        disabled={pendingCharacters.length < 2}
                         className="px-6 py-3 rounded-xl text-white font-semibold text-sm tracking-wider uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         style={{
-                            background: selectedCharacters.length >= 2
+                            background: pendingCharacters.length >= 2
                                 ? 'linear-gradient(135deg, #7C3AED, #6D28D9)'
                                 : 'rgba(124, 58, 237, 0.2)',
                         }}
-                        whileHover={selectedCharacters.length >= 2 ? { scale: 1.02 } : {}}
-                        whileTap={selectedCharacters.length >= 2 ? { scale: 0.97 } : {}}
+                        whileHover={pendingCharacters.length >= 2 ? { scale: 1.02 } : {}}
+                        whileTap={pendingCharacters.length >= 2 ? { scale: 0.97 } : {}}
                     >
-                        MECLİSİ KUR →
+                        MECLİSİ TOPLA →
                     </motion.button>
                 </div>
             </motion.div>

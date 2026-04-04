@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { getCharacterByMbti } from '@/data/characters';
+import { CHARACTER_VISUALS } from '@/lib/characterVisuals';
 
 interface VoteSelectorProps {
     characters: string[];
@@ -23,34 +23,39 @@ export default function VoteSelector({ characters, onVote, selectedVote }: VoteS
 
             <div className="flex gap-3 flex-wrap">
                 {characters.map((mbti) => {
-                    const char = getCharacterByMbti(mbti);
-                    if (!char) return null;
+                    const vis = CHARACTER_VISUALS[mbti];
+                    if (!vis) return null;
                     const isSelected = selectedVote === mbti;
 
                     return (
                         <motion.button
                             key={mbti}
                             onClick={() => onVote(mbti)}
-                            className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 min-w-[80px]"
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300"
                             style={{
-                                background: isSelected ? `${char.color}20` : 'var(--bg-card)',
-                                border: isSelected ? `2px solid ${char.color}` : '2px solid var(--border-subtle)',
+                                minHeight: 64,
+                                minWidth: 80,
+                                background: isSelected ? vis.bg : 'var(--bg-card)',
+                                border: isSelected ? `2px solid ${vis.accentColor}` : '2px solid var(--border-subtle)',
+                                boxShadow: isSelected ? `0 0 12px ${vis.accentColor}40` : 'none',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none' as const,
                             }}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
                             <div
-                                className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all"
+                                className="w-12 h-12 rounded-xl flex items-center justify-center text-lg transition-all"
                                 style={{
-                                    background: isSelected ? char.color : `${char.color}20`,
-                                    color: isSelected ? 'white' : char.color,
+                                    background: isSelected ? vis.accentColor : vis.bg,
+                                    border: `1px solid ${vis.accentColor}40`,
                                 }}
                             >
-                                {mbti.substring(0, 2)}
+                                {vis.emoji}
                             </div>
                             <span
                                 className="text-xs font-medium tracking-wider"
-                                style={{ color: isSelected ? char.color : 'var(--text-secondary)' }}
+                                style={{ color: isSelected ? vis.accentColor : 'var(--text-secondary)' }}
                             >
                                 {mbti}
                             </span>

@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { getCharacterByMbti } from '@/data/characters';
+import { CHARACTER_VISUALS } from '@/lib/characterVisuals';
+import CharacterAvatar from './CharacterAvatar';
 
 interface CharacterCardProps {
     mbti: string;
@@ -12,7 +14,8 @@ interface CharacterCardProps {
 
 export default function CharacterCard({ mbti, isSelected, onToggle, index }: CharacterCardProps) {
     const character = getCharacterByMbti(mbti);
-    if (!character) return null;
+    const visuals = CHARACTER_VISUALS[mbti];
+    if (!character || !visuals) return null;
 
     return (
         <motion.button
@@ -20,14 +23,13 @@ export default function CharacterCard({ mbti, isSelected, onToggle, index }: Cha
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04, duration: 0.4 }}
             onClick={onToggle}
-            className="relative rounded-xl p-4 text-left transition-all duration-300 group"
+            className="relative rounded-2xl p-3 text-center transition-all duration-300 group"
             style={{
-                background: isSelected
-                    ? `linear-gradient(135deg, ${character.color}15, ${character.color}08)`
-                    : 'var(--bg-card)',
+                background: isSelected ? `${visuals.bg}80` : 'rgba(255,255,255,0.02)',
                 border: isSelected
-                    ? `2px solid ${character.color}`
-                    : '2px solid var(--border-subtle)',
+                    ? `1.5px solid ${visuals.accentColor}`
+                    : '1px solid rgba(255,255,255,0.08)',
+                transform: isSelected ? 'scale(1.03)' : 'scale(1)',
             }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
@@ -37,42 +39,19 @@ export default function CharacterCard({ mbti, isSelected, onToggle, index }: Cha
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: character.color }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs text-white"
+                    style={{ background: visuals.accentColor }}
                 >
                     ✓
                 </motion.div>
             )}
 
-            {/* Avatar circle */}
-            <div
-                className="w-14 h-14 rounded-lg flex items-center justify-center mb-3 mx-auto text-xl font-bold transition-all duration-300"
-                style={{
-                    background: `${character.color}20`,
-                    color: character.color,
-                    border: `1px solid ${character.color}40`,
-                }}
-            >
-                {mbti[0]}
+            <div className="flex flex-col items-center">
+                <CharacterAvatar mbti={mbti} size="md" showLabel isSelected={isSelected} />
+                <div className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {visuals.tagline}
+                </div>
             </div>
-
-            {/* MBTI code */}
-            <p className="font-bold text-sm text-center tracking-wider text-[var(--text-primary)]">
-                {mbti}
-            </p>
-
-            {/* Role name */}
-            <p
-                className="text-xs text-center font-medium mt-1 uppercase tracking-wider"
-                style={{ color: character.color }}
-            >
-                {character.name}
-            </p>
-
-            {/* Description */}
-            <p className="text-[10px] text-center text-[var(--text-secondary)] mt-2 leading-relaxed">
-                {character.description}
-            </p>
         </motion.button>
     );
 }

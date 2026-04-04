@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
+const QUICK_REPLIES = [
+    'Haklısın, ama...',
+    'Bunu hiç düşünmemiştim',
+    'Pratik adım ne olur?',
+    'Korkularım var bu konuda',
+    'Daha spesifik ol lütfen',
+];
+
 interface UserInputBarProps {
     onSubmit: (message: string) => void;
     disabled?: boolean;
@@ -35,6 +43,26 @@ export default function UserInputBar({ onSubmit, disabled }: UserInputBarProps) 
             <p className="text-xs tracking-[0.1em] uppercase text-[var(--text-secondary)] mb-3">
                 MECLİSE KATIL
             </p>
+
+            {/* Quick reply chips */}
+            <div className="flex gap-2 flex-wrap mb-3">
+                {QUICK_REPLIES.map(reply => (
+                    <button
+                        key={reply}
+                        onClick={() => setMessage(reply)}
+                        className="rounded-full text-xs transition-all hover:bg-white/10 hover:text-white/90"
+                        style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '6px 14px',
+                            color: 'rgba(255,255,255,0.6)',
+                            whiteSpace: 'nowrap' as const,
+                        }}
+                    >
+                        {reply}
+                    </button>
+                ))}
+            </div>
 
             <div className="glass rounded-xl p-4">
                 <textarea
