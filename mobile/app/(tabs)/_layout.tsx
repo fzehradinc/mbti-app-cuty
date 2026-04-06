@@ -5,12 +5,16 @@ import { useT } from '@/lib/translations';
 
 const TAB_BAR_BG = '#09090C';
 const ACTIVE_TINT = '#7C5CFC';
-const INACTIVE_TINT = '#FFFFFF20';
+const INACTIVE_TINT = '#8B8BAD';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function TabLayout() {
   const { t } = useT();
+  const navHome = t?.nav_home ?? 'Start';
+  const navHistory = t?.nav_history ?? 'History';
+  const navReport = t?.nav_report ?? 'Reports';
+  const navProfile = t?.nav_profile ?? 'Profile';
 
   return (
     <Tabs
@@ -26,7 +30,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t.nav_home,
+          title: navHome,
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <View style={[styles.homeIconWrap, focused && styles.homeIconFocused]}>
               <Image
@@ -41,7 +45,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="gecmis"
         options={{
-          title: t.nav_history,
+          title: navHistory,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="time-outline" size={size} color={color} />
           ),
@@ -50,7 +54,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="rapor"
         options={{
-          title: t.nav_report,
+          title: navReport,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="analytics-outline" size={size} color={color} />
           ),
@@ -59,7 +63,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profil"
         options={{
-          title: t.nav_profile,
+          title: navProfile,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
